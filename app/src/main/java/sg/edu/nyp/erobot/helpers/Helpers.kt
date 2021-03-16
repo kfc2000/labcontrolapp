@@ -1,8 +1,10 @@
 package sg.edu.nyp.erobot.helpers
 
 import android.app.Activity
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Handler
 import android.util.Log
 import android.widget.ImageView
@@ -221,6 +223,15 @@ object Helpers {
         }
 
         return arrNoAlpha
+    }
+
+    fun createTemoraryFile(context: Context, uri: Uri): File {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val f = createTempFile(
+                directory = context.cacheDir
+        )
+        inputStream?.copyTo(f.outputStream())
+        return f
     }
 
 }
