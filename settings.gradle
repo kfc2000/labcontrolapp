@@ -1,0 +1,4 @@
+include ':opencv4_3_0'
+include ':app'
+rootProject.name = "NYPeRobot"
+include ':openCVLibrary3413'

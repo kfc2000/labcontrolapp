@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">NYP eRobot</string>
+    <string name="start">Start</string>
+    <string name="patrol">Patrol</string>
+</resources>
