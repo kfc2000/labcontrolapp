@@ -540,13 +540,13 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
                                     val details = hashMapOf(
                                             "Location" to "MakerSpace",
                                             "RobotID" to "1",
-                                            "timeCreated" to Calendar.getInstance().time
+                                            "TimeCreated" to Calendar.getInstance().time
                                     )
                                     val imageDetails = hashMapOf(
                                             "DateTaken" to Calendar.getInstance().time,
-                                            "Description" to "d",
-                                            "LocalURI" to "s",
-                                            "RemoteURI" to downloadUri
+                                            "Description" to "",
+                                            "LocalURI" to "",
+                                            "RemoteURI" to downloadUri.toString()
                                     )
 
                                     db.collection("Violations").document(uuid.toString())
@@ -558,6 +558,24 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
                                             .set(imageDetails)
                                             .addOnSuccessListener { Log.d(TAG, "DocumentSnapshot successfully written!") }
                                             .addOnFailureListener { e -> Log.d(TAG, "Error writing document", e) }
+
+                                    // send notification
+                                    val topic = "/topics/Enter_topic" //topic has to match what the receiver subscribed to
+
+                                    val notification = JSONObject()
+                                    val notifcationBody = JSONObject()
+
+                                    try {
+                                        notifcationBody.put("title", "SDA Tracker App")
+                                        notifcationBody.put("message", "Not wearing mask violation detected")
+                                        notification.put("to", topic)
+                                        notification.put("data", notifcationBody)
+                                        Log.e("TAG", "try")
+                                    } catch (e: JSONException) {
+                                        Log.e("TAG", "onCreate: " + e.message)
+                                    }
+
+                                    sendNotification(notification)
                                 } else {
                                     // Handle failures
                                     // ...
@@ -586,6 +604,74 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
                 if (detectedPeopleFrameCounter >= 8) {
                     if (!robot!!.isSpeaking()) {
                         robot!!.speak("Please keep your social distance of 1 meters apart")
+                        var uuid = UUID.randomUUID()
+                        saveImage(this, imageRgba!!, uuid.toString() + ".jpg")
+                        var fs= this.filesDir.absolutePath + "/image.jpg"
+                        var file = Uri.fromFile(File(this.filesDir.absolutePath + "/"+ uuid.toString() + ".jpg"))
+                        val Ref = storageRef.child("${file.lastPathSegment}")
+                        val uploadTask = Ref.putFile(file)
+
+                        val urlTask = uploadTask.continueWithTask { task ->
+                            if (!task.isSuccessful) {
+                                task.exception?.let {
+                                    throw it
+                                }
+                            }
+                            Ref.downloadUrl
+                        }.addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                val downloadUri = task.result
+                                val details = hashMapOf(
+                                    "Location" to "MakerSpace",
+                                    "RobotID" to "1",
+                                    "TimeCreated" to Calendar.getInstance().time
+                                )
+                                val imageDetails = hashMapOf(
+                                    "DateTaken" to Calendar.getInstance().time,
+                                    "Description" to "",
+                                    "LocalURI" to "",
+                                    "RemoteURI" to downloadUri.toString()
+                                )
+
+                                db.collection("Violations").document(uuid.toString())
+                                    .set(details)
+                                    .addOnSuccessListener { Log.d(TAG, "DocumentSnapshot successfully written!") }
+                                    .addOnFailureListener { e -> Log.d(TAG, "Error writing document", e) }
+                                // unable to create subcollections
+                                db.collection("Violations").document(uuid.toString()).collection("Photos").document(uuid.toString())
+                                    .set(imageDetails)
+                                    .addOnSuccessListener { Log.d(TAG, "DocumentSnapshot successfully written!") }
+                                    .addOnFailureListener { e -> Log.d(TAG, "Error writing document", e) }
+
+                                // send notification
+                                val topic = "/topics/Enter_topic" //topic has to match what the receiver subscribed to
+
+                                val notification = JSONObject()
+                                val notifcationBody = JSONObject()
+
+                                try {
+                                    notifcationBody.put("title", "SDA Tracker App")
+                                    notifcationBody.put("message", "Less than 1 metre apart violation detected")
+                                    notification.put("to", topic)
+                                    notification.put("data", notifcationBody)
+                                    Log.e("TAG", "try")
+                                } catch (e: JSONException) {
+                                    Log.e("TAG", "onCreate: " + e.message)
+                                }
+
+                                sendNotification(notification)
+                            } else {
+                                // Handle failures
+                                // ...
+                            }
+                        }
+                        // Register observers to listen for when the download is done or if it fails
+                        uploadTask.addOnFailureListener {
+                            // Handle unsuccessful uploads
+                        }.addOnSuccessListener { taskSnapshot ->
+                            // taskSnapshot.metadata contains file metadata such as size, content-type, etc.
+                            // ...
+                        }
                     }
                     detectedPeopleFrameCounter = 0
                 }
